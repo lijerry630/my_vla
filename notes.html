@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全部笔记 · VLA 学习日志</title>
+<meta name="description" content="记录视觉-语言-动作模型（VLA）的系统学习：概念、架构、动作表示、数据、主流模型、评测与上手实验。">
+<meta name="author" content="VLA 学习日志">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" fill="#101a23"/>
+        <rect x="5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="12.5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="20" y="9" width="7" height="6" fill="none" stroke="#e6b34a" stroke-width="1.2"/>
+        <path d="M7 21h18M23 19l2 2-2 2" fill="none" stroke="#7e93a5" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-text"><b>VLA 学习日志</b><span>VISION · LANGUAGE · ACTION</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="index.html" data-nav="home">首页</a>
+      <a href="notes.html" data-nav="notes" data-current>笔记</a>
+      <a href="resources.html" data-nav="resources">资源</a>
+      <a href="about.html" data-nav="about">关于</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="wrap">
+  <div class="sheet pad-sheet">
+    <div class="section-head" style="margin-top:0">
+      <h2>全部笔记</h2>
+      <span class="count"><span data-visible-count>7</span> / 7 篇</span>
+    </div>
+    <p class="lede-small">按时间与依赖顺序排列。每篇都尽量回答一个具体问题，而不是复述论文摘要。</p>
+    <div class="filter-bar">
+      <span class="label">标签</span>
+      <div class="tag-strip"><button class="chip-btn" data-filter="*" aria-pressed="true">全部</button>
+      <button class="chip-btn" data-filter="概念" aria-pressed="false">概念</button>
+      <button class="chip-btn" data-filter="入门" aria-pressed="false">入门</button>
+      <button class="chip-btn" data-filter="架构" aria-pressed="false">架构</button>
+      <button class="chip-btn" data-filter="原理" aria-pressed="false">原理</button>
+      <button class="chip-btn" data-filter="动作表示" aria-pressed="false">动作表示</button>
+      <button class="chip-btn" data-filter="数据" aria-pressed="false">数据</button>
+      <button class="chip-btn" data-filter="训练" aria-pressed="false">训练</button>
+      <button class="chip-btn" data-filter="模型" aria-pressed="false">模型</button>
+      <button class="chip-btn" data-filter="综述" aria-pressed="false">综述</button>
+      <button class="chip-btn" data-filter="评测" aria-pressed="false">评测</button>
+      <button class="chip-btn" data-filter="方法论" aria-pressed="false">方法论</button>
+      <button class="chip-btn" data-filter="实验" aria-pressed="false">实验</button>
+      <button class="chip-btn" data-filter="实践" aria-pressed="false">实践</button></div>
+      <input class="search-input" type="search" placeholder="搜索标题或关键词" data-search aria-label="搜索笔记">
+    </div>
+    <ul class="log-list" data-log-list>
+<li class="log-row" data-tags="概念 入门"><span class="idx">LOG 01</span><div class="body"><h3><a href="notes/what-is-vla.html">VLA 到底是什么：把一句指令落到关节上</a></h3><p>一次前向推理里，视觉、语言与动作如何对齐；VLA 与 VLM、与传统分层策略的分界线在哪里。</p></div><div class="side"><span class="tag">概念</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="架构 原理"><span class="idx">LOG 02</span><div class="body"><h3><a href="notes/architecture.html">架构解剖：主干、动作头与双系统</a></h3><p>从 VLM 主干到四种动作头，再到「慢思考 + 快执行」的双系统分层，把参数规模与推理频率的取舍算清楚。</p></div><div class="side"><span class="tag">架构</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="动作表示 原理"><span class="idx">LOG 03</span><div class="body"><h3><a href="notes/action-representation.html">动作怎么变成 token：四个流派与取舍</a></h3><p>离散 bin、FAST 频域压缩、扩散、流匹配四类动作头，各自建模什么、牺牲什么，以及在什么任务上会翻车。</p></div><div class="side"><span class="tag">动作表示</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="数据 训练"><span class="idx">LOG 04</span><div class="body"><h3><a href="notes/data-and-training.html">数据与训练：从 Open X-Embodiment 到自己的二十条演示</a></h3><p>预训练数据的生态与格式、co-fine-tuning 的作用、标定与归一化这类隐形坑，以及小数据微调的现实路径。</p></div><div class="side"><span class="tag">数据</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="模型 综述"><span class="idx">LOG 05</span><div class="body"><h3><a href="notes/model-landscape.html">2026 年的开源 VLA 图谱</a></h3><p>OpenVLA、Octo、π0/π0.5、GR00T N1 系列、SmolVLA、X-VLA、MolmoAct2 各自的定位，以及按算力与任务该怎么选。</p></div><div class="side"><span class="tag">模型</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="评测 方法论"><span class="idx">LOG 06</span><div class="body"><h3><a href="notes/benchmarks.html">评测：LIBERO 分数好看，真机为什么不行</a></h3><p>四个常用 benchmark 各自测什么、成功率的统计陷阱、仿真到真机的差距来源，以及一套最低成本的自评流程。</p></div><div class="side"><span class="tag">评测</span><br>2026-11-18</div></li>
+<li class="log-row" data-tags="实验 实践"><span class="idx">LOG 07</span><div class="body"><h3><a href="notes/hands-on.html">上手：一张 4090 能走到哪一步</a></h3><p>从 LeRobot + SmolVLA 到 openpi 跑 LIBERO，显存需求、步骤清单、常见报错与调试顺序。</p></div><div class="side"><span class="tag">实验</span><br>2026-11-18</div></li>
+    </ul>
+    <p class="empty-hint" data-empty hidden>没有匹配的笔记，换个标签或关键词试试。</p>
+  </div>
+</section>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <span>个人学习记录 · 内容持续修订</span>
+    <span>
+      <a href="https://github.com/lijerry630/my_vla" rel="noopener">GitHub 仓库</a>
+      <span aria-hidden="true"> · </span>
+      由 content/*.md 构建
+    </span>
+  </div>
+</footer>
+<script src="assets/js/site.js" defer></script>
+</body>
+</html>

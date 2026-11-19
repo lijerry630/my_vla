@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VLA 到底是什么：把一句指令落到关节上 · VLA 学习日志</title>
+<meta name="description" content="一次前向推理里，视觉、语言与动作如何对齐；VLA 与 VLM、与传统分层策略的分界线在哪里。">
+<meta name="author" content="VLA 学习日志">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:['pre','code','script','style','textarea'],throwOnError:false})"></script>
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" fill="#101a23"/>
+        <rect x="5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="12.5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="20" y="9" width="7" height="6" fill="none" stroke="#e6b34a" stroke-width="1.2"/>
+        <path d="M7 21h18M23 19l2 2-2 2" fill="none" stroke="#7e93a5" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-text"><b>VLA 学习日志</b><span>VISION · LANGUAGE · ACTION</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="../index.html" data-nav="home">首页</a>
+      <a href="../notes.html" data-nav="notes" data-current>笔记</a>
+      <a href="../resources.html" data-nav="resources">资源</a>
+      <a href="../about.html" data-nav="about">关于</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="wrap"><div class="sheet"><div class="note-head"><div class="crumbs"><a href="../index.html">首页</a><span>/</span><a href="../notes.html">笔记</a><span>/</span>LOG 01</div><div class="note-meta"><span>LOG 01</span><span>2026-11-18</span><span>3 min</span><span>概念 · 入门</span></div><h1>VLA 到底是什么：把一句指令落到关节上</h1><p class="note-summary">一次前向推理里，视觉、语言与动作如何对齐；VLA 与 VLM、与传统分层策略的分界线在哪里。</p></div><div class="note-layout"><article class="prose"><h2 id="sec-01">一句话说清</h2>
+<p>VLA（Vision-Language-Action）是一个<strong>神经网络策略</strong>：输入是机器人的观测和一句自然语言指令，输出是一段可以直接执行的动作序列。</p>
+<ul><li>输入：一路或多路 RGB 图像（常带几帧历史）、一条指令文本，可选本体状态（关节角、夹爪开合、末端位姿）</li><li>输出：一个动作 chunk，例如未来 8～16 步的末端位姿增量 <code>[Δx, Δy, Δz, Δrx, Δry, Δrz, grip]</code>，或者关节目标位置</li><li>关键点：<strong>端到端</strong>。没有「先检测物体、再规划轨迹、再跟踪」的分层流水线，一个模型吃掉像素和文字，吐出控制量</li></ul>
+<h2 id="sec-02">它和 VLM 差在哪</h2>
+<p>把 VLA 理解成「给视觉语言模型接一个动作头」只说对了一半。真正的差别在输出空间和时间约束：</p>
+<div class="table-scroll"><table><colgroup><col style="width:15.09%"><col style="width:28.3%"><col style="width:56.61%"></colgroup><thead><tr><th style="text-align:left">维度</th><th style="text-align:left">VLM</th><th style="text-align:left">VLA</th></tr></thead><tbody><tr><td style="text-align:left">输出</td><td style="text-align:left">文本 token</td><td style="text-align:left">连续控制量或动作 token</td></tr><tr><td style="text-align:left">时间</td><td style="text-align:left">单次回答，可离线</td><td style="text-align:left">闭环，通常 5～50 Hz</td></tr><tr><td style="text-align:left">数据</td><td style="text-align:left">网络图文对，海量</td><td style="text-align:left">机器人遥操作，昂贵且异构</td></tr><tr><td style="text-align:left">失败代价</td><td style="text-align:left">答错一句</td><td style="text-align:left">撞到东西、夹空、把人碰了</td></tr><tr><td style="text-align:left">泛化难点</td><td style="text-align:left">概念覆盖</td><td style="text-align:left">跨本体、跨场景、跨光照与物体摆放</td></tr></tbody></table></div>
+<p>所以 VLA 的论文里，架构创新只是一半，另一半永远是<strong>动作怎么表示</strong>、<strong>数据从哪来</strong>、<strong>怎么证明它真的能干活</strong>。</p>
+<h2 id="sec-03">三个绕不开的历史节点</h2>
+<p><strong>2022 · RT-1。</strong> 13 万条真实机器人演示，动作被离散成 token，用一个 Transformer 做策略。它证明了「大规模真实数据 + 简单架构」在机器人上成立，但也暴露了泛化只限于见过的任务族。</p>
+<p><strong>2023 · RT-2。</strong> 把动作直接当成文本 token 塞进 VLM 的输出词表，再和网络图文数据共同微调。这一步带来的是语义泛化：模型能理解「把可乐罐挪到最上面的抽屉」这种没在演示里出现过的组合说法。</p>
+<p><strong>2024 · OpenVLA 与 π0。</strong> 前者把 7B 的 VLA 权重开源，让「下载下来就能跑」成为现实，此后所有工作都拿它当基线；后者用 flow matching 输出连续动作，采样频率做到 50 Hz 级别，把「离散 token」和「连续控制」的路线分歧摆到台面上。</p>
+<h2 id="sec-04">为什么它难</h2>
+<ul><li><strong>动作表示是第一性问题</strong>：离散 token 好训练、能复用语言模型的词表，但量化误差会让精细装配做不了；连续回归精度高，却难建模多模态的动作分布（同一个目标可以有多条合法轨迹）。</li><li><strong>跨本体迁移</strong>：七维末端位姿和六轴关节角不是一个空间的东西。要么统一到末端位姿，要么学一个把不同动作映射到共享空间的 tokenizer。</li><li><strong>数据</strong>：遥操作采集慢、成本高，公开数据集格式还不统一（RLDS 与 LeRobot 是两套主流形态）。</li><li><strong>评测</strong>：仿真榜单上的分数和真机上「能不能夹起那块抹布」之间，往往没有稳定对应关系。</li></ul>
+<h2 id="sec-05">一个常见误解</h2>
+<p>「VLA 就是 VLM 加个动作头，所以 VLM 越强 VLA 越强。」</p>
+<p>实际观察恰恰相反：很多工作在换更强的 VLM 主干后收益有限，反倒是动作头设计、数据配比（机器人数据与网络数据的混合比例）、动作归一化方式带来的提升更大。主干提供的是语义与空间先验，真正决定手能不能稳的，是动作那一侧。</p>
+<h2 id="sec-06">我的学习顺序</h2>
+<ol><li>先把「输入输出」对齐到具体张量形状（本篇）</li><li>再看架构怎么拆主干与动作头</li><li>然后死磕动作表示，因为它决定了后面所有实验的上限</li><li>数据与训练、模型图谱、评测依次展开</li><li>最后用一张消费级显卡把开源策略真正跑起来</li></ol>
+<p>下一篇就按这个顺序走：<code>架构解剖</code>。</p><div class="note-foot"><a href="architecture.html" data-next><span class="dir">下一篇</span><span class="ttl">架构解剖：主干、动作头与双系统</span></a></div></article><aside class="toc"><h2>本页目录</h2><ol><li data-level="2"><a href="#sec-01" data-toc-link>一句话说清</a></li><li data-level="2"><a href="#sec-02" data-toc-link>它和 VLM 差在哪</a></li><li data-level="2"><a href="#sec-03" data-toc-link>三个绕不开的历史节点</a></li><li data-level="2"><a href="#sec-04" data-toc-link>为什么它难</a></li><li data-level="2"><a href="#sec-05" data-toc-link>一个常见误解</a></li><li data-level="2"><a href="#sec-06" data-toc-link>我的学习顺序</a></li></ol></aside></div></div></section></main>
+<footer class="site-foot">
+  <div class="wrap">
+    <span>个人学习记录 · 内容持续修订</span>
+    <span>
+      <a href="https://github.com/lijerry630/my_vla" rel="noopener">GitHub 仓库</a>
+      <span aria-hidden="true"> · </span>
+      由 content/*.md 构建
+    </span>
+  </div>
+</footer>
+<script src="../assets/js/site.js" defer></script>
+</body>
+</html>

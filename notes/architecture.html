@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>架构解剖：主干、动作头与双系统 · VLA 学习日志</title>
+<meta name="description" content="从 VLM 主干到四种动作头，再到「慢思考 + 快执行」的双系统分层，把参数规模与推理频率的取舍算清楚。">
+<meta name="author" content="VLA 学习日志">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:['pre','code','script','style','textarea'],throwOnError:false})"></script>
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" fill="#101a23"/>
+        <rect x="5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="12.5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="20" y="9" width="7" height="6" fill="none" stroke="#e6b34a" stroke-width="1.2"/>
+        <path d="M7 21h18M23 19l2 2-2 2" fill="none" stroke="#7e93a5" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-text"><b>VLA 学习日志</b><span>VISION · LANGUAGE · ACTION</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="../index.html" data-nav="home">首页</a>
+      <a href="../notes.html" data-nav="notes" data-current>笔记</a>
+      <a href="../resources.html" data-nav="resources">资源</a>
+      <a href="../about.html" data-nav="about">关于</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="wrap"><div class="sheet"><div class="note-head"><div class="crumbs"><a href="../index.html">首页</a><span>/</span><a href="../notes.html">笔记</a><span>/</span>LOG 02</div><div class="note-meta"><span>LOG 02</span><span>2026-11-18</span><span>5 min</span><span>架构 · 原理</span></div><h1>架构解剖：主干、动作头与双系统</h1><p class="note-summary">从 VLM 主干到四种动作头，再到「慢思考 + 快执行」的双系统分层，把参数规模与推理频率的取舍算清楚。</p></div><div class="note-layout"><article class="prose"><h2 id="sec-01">三段式结构</h2>
+<p>几乎所有 VLA 都能拆成三段：<strong>视觉编码 + 语言/多模态主干 + 动作头</strong>。</p>
+<figure class="code"><div class="code-bar"><span>text</span><button class="copy" type="button" data-copy>复制</button></div><pre><code>图像 ──► 视觉编码器 ──┐
+                     ├──► VLM 主干 ──► 动作头 ──► 动作 chunk
+指令 ──► tokenizer ──┘        ▲
+本体状态 ─────────────────────┘（部分模型才有）</code></pre></figure>
+<p><code>PaliGemma</code>、<code>Llama</code>、<code>Qwen2-VL</code>、<code>Florence-2</code> 是常见主干选择：视觉 token 与文本 token 拼在一起进同一个 Transformer，输出的隐状态再交给动作头。主干决定了「看懂多少」，动作头决定了「做得多准」。</p>
+<h2 id="sec-02">四种动作头</h2>
+<div class="table-scroll"><table><colgroup><col style="width:8.89%"><col style="width:35.56%"><col style="width:25.56%"><col style="width:29.99%"></colgroup><thead><tr><th style="text-align:left">类型</th><th style="text-align:left">代表做法</th><th style="text-align:left">建模能力</th><th style="text-align:left">代价</th></tr></thead><tbody><tr><td style="text-align:left">离散 bin</td><td style="text-align:left">每维切成 256 个区间，用交叉熵预测</td><td style="text-align:left">训练稳定，可复用语言词表</td><td style="text-align:left">量化误差，精细操作受限</td></tr><tr><td style="text-align:left">回归 MLP</td><td style="text-align:left">L1 / L2 直接回归连续值</td><td style="text-align:left">简单、推理快</td><td style="text-align:left">多峰分布下会平均化，动作变糊</td></tr><tr><td style="text-align:left">扩散头</td><td style="text-align:left">DDPM 去噪一个动作 chunk</td><td style="text-align:left">多模态分布建模强</td><td style="text-align:left">采样步数多，慢</td></tr><tr><td style="text-align:left">流匹配</td><td style="text-align:left">学一个从噪声到动作的速度场</td><td style="text-align:left">强，且 1～10 步可采样</td><td style="text-align:left">训练目标需要仔细调</td></tr></tbody></table></div>
+<p>离散 bin 的做法很直观：把每维动作按训练集的分位数切成 256 个格子，预测落在哪个格子，再取格心还原成实数。OpenVLA 用的就是这套，好处是能直接套用现成的语言模型头，坏处是装配任务里几毫米的精度会被量化吃掉。</p>
+<p>流匹配则是连续路线的主流。它学的是「从噪声 $x_0$ 到真实动作 $x_1$ 的直线路径上的速度」：</p>
+<div class="math-block">$$
+x_t = (1 - t)\,x_0 + t\,x_1,\qquad \mathcal{L} = \mathbb{E}_{t,x_0,x_1}\left\| v_\theta(x_t, t) - (x_1 - x_0) \right\|^2
+$$</div>
+<p>推理时从 $x_0 \sim \mathcal{N}(0, I)$ 出发，用 1～10 步欧拉积分推到 $x_1$，得到整段动作 chunk。这也是为什么 π0 系列能做到高控制频率：一次前向就给一段动作，而不是一步一采样。</p>
+<h2 id="sec-03">双系统：慢思考，快执行</h2>
+<p>单一模型同时负责「理解复杂指令」和「30 Hz 输出」很吃力。于是有了双系统分层：</p>
+<ul><li><strong>慢系统</strong>（VLM 主干部份，几 Hz）：读图读指令，产出语义特征或子任务意图</li><li><strong>快系统</strong>（小 DiT 或流匹配专家，几十 Hz）：吃视觉特征 + 本体状态，高频吐动作</li></ul>
+<p>π0 的做法是把动作专家与 VLM 主干放在同一个模型里，动作专家只看主干的中层特征；GR00T N1 系列是更显式的多路结构：视觉语言层、扩散变换层分工。共同点是<strong>参数量的绝大部分给理解，频率任务交给小得多的执行模块</strong>。</p>
+<h2 id="sec-04">参数与频率的账</h2>
+<p>设控制频率 $f$、单次推理延迟 $T$、chunk 长度 $k$，那么有效执行频率约为 $f = k / T$。这条式子解释了两条工程事实：</p>
+<ul><li>缩短 chunk、加快单次推理 → 反应灵敏，但误差累积快、抖动大</li><li>拉长 chunk → 平滑，但遇到扰动时来不及纠正</li></ul>
+<p>实际部署里常用<strong>动作分块 + 滚动重规划</strong>：执行 chunk 的前几步，就用新观测重算下一段，用「重叠执行」换稳定性。这一步做不好，仿真里 95% 的策略在真机上会明显掉分。</p>
+<h2 id="sec-05">一次前向在做什么</h2>
+<figure class="code"><div class="code-bar"><span>python</span><button class="copy" type="button" data-copy>复制</button></div><pre><code># 概念示意，不是任何具体模型的实现
+def policy_step(obs, instruction, state):
+    tokens = tokenize(instruction)                    # 文本
+    visual = vision_encoder(obs.images)               # 多路图像 -&gt; tokens
+    seq = concat(visual, tokens, project(state))      # 本体状态常投影后拼入
+    hidden = vlm_forward(seq)                         # 主干
+    if action_head == &quot;discrete&quot;:
+        bins = argmax(lm_head(hidden[-k:]))           # 每维取一个 bin
+        action = dequantize(bins)                     # bin -&gt; 实数
+    else:
+        noise = randn_like(action_shape)
+        for step in range(num_steps):                 # 流匹配 / 扩散采样
+            noise = noise + dt * action_expert(hidden, noise, t=step)
+        action = noise
+    return action                                     # 一段 chunk</code></pre></figure>
+<p>看懂这段，就能判断一篇 VLA 论文的创新点落在哪：换主干、换动作头、改数据配比，还是改训练目标。</p>
+<h2 id="sec-06">小结</h2>
+<p>架构层面真正影响结果的三件事，按重要性排：<strong>动作头与动作表示</strong> &gt; <strong>主干选型</strong> &gt; <strong>是否双系统</strong>。下一篇专攻第一项。</p><div class="note-foot"><a href="what-is-vla.html"><span class="dir">上一篇</span><span class="ttl">VLA 到底是什么：把一句指令落到关节上</span></a><a href="action-representation.html" data-next><span class="dir">下一篇</span><span class="ttl">动作怎么变成 token：四个流派与取舍</span></a></div></article><aside class="toc"><h2>本页目录</h2><ol><li data-level="2"><a href="#sec-01" data-toc-link>三段式结构</a></li><li data-level="2"><a href="#sec-02" data-toc-link>四种动作头</a></li><li data-level="2"><a href="#sec-03" data-toc-link>双系统：慢思考，快执行</a></li><li data-level="2"><a href="#sec-04" data-toc-link>参数与频率的账</a></li><li data-level="2"><a href="#sec-05" data-toc-link>一次前向在做什么</a></li><li data-level="2"><a href="#sec-06" data-toc-link>小结</a></li></ol></aside></div></div></section></main>
+<footer class="site-foot">
+  <div class="wrap">
+    <span>个人学习记录 · 内容持续修订</span>
+    <span>
+      <a href="https://github.com/lijerry630/my_vla" rel="noopener">GitHub 仓库</a>
+      <span aria-hidden="true"> · </span>
+      由 content/*.md 构建
+    </span>
+  </div>
+</footer>
+<script src="../assets/js/site.js" defer></script>
+</body>
+</html>

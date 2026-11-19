@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据与训练：从 Open X-Embodiment 到自己的二十条演示 · VLA 学习日志</title>
+<meta name="description" content="预训练数据的生态与格式、co-fine-tuning 的作用、标定与归一化这类隐形坑，以及小数据微调的现实路径。">
+<meta name="author" content="VLA 学习日志">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:['pre','code','script','style','textarea'],throwOnError:false})"></script>
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" fill="#101a23"/>
+        <rect x="5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="12.5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="20" y="9" width="7" height="6" fill="none" stroke="#e6b34a" stroke-width="1.2"/>
+        <path d="M7 21h18M23 19l2 2-2 2" fill="none" stroke="#7e93a5" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-text"><b>VLA 学习日志</b><span>VISION · LANGUAGE · ACTION</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="../index.html" data-nav="home">首页</a>
+      <a href="../notes.html" data-nav="notes" data-current>笔记</a>
+      <a href="../resources.html" data-nav="resources">资源</a>
+      <a href="../about.html" data-nav="about">关于</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="wrap"><div class="sheet"><div class="note-head"><div class="crumbs"><a href="../index.html">首页</a><span>/</span><a href="../notes.html">笔记</a><span>/</span>LOG 04</div><div class="note-meta"><span>LOG 04</span><span>2026-11-18</span><span>3 min</span><span>数据 · 训练</span></div><h1>数据与训练：从 Open X-Embodiment 到自己的二十条演示</h1><p class="note-summary">预训练数据的生态与格式、co-fine-tuning 的作用、标定与归一化这类隐形坑，以及小数据微调的现实路径。</p></div><div class="note-layout"><article class="prose"><h2 id="sec-01">数据生态</h2>
+<p>VLA 的预训练几乎都站在几个公开数据集上：</p>
+<div class="table-scroll"><table><colgroup><col style="width:17.89%"><col style="width:25.26%"><col style="width:26.32%"><col style="width:30.53%"></colgroup><thead><tr><th style="text-align:left">数据集</th><th style="text-align:left">形态</th><th style="text-align:left">规模量级</th><th style="text-align:left">用它的理由</th></tr></thead><tbody><tr><td style="text-align:left">Open X-Embodiment</td><td style="text-align:left">多本体汇总，RLDS 格式</td><td style="text-align:left">百万级轨迹、二十余种机器人</td><td style="text-align:left">跨本体预训练的标准底座</td></tr><tr><td style="text-align:left">DROID</td><td style="text-align:left">真实厨房/办公场景，多机位</td><td style="text-align:left">七万级轨迹、数百场景</td><td style="text-align:left">场景多样性强，适合做鲁棒性验证</td></tr><tr><td style="text-align:left">BridgeData</td><td style="text-align:left">桌面操作，单臂</td><td style="text-align:left">万级轨迹</td><td style="text-align:left">早期基线，几乎每篇都比它</td></tr><tr><td style="text-align:left">自采数据</td><td style="text-align:left">LeRobot 格式</td><td style="text-align:left">几十到几百条</td><td style="text-align:left">目标任务微调，质量可控</td></tr></tbody></table></div>
+<p>格式是第一个门槛：RLDS 用 TFRecord 打包，LeRobot 用 parquet 加 mp4。两边都要读的话，最好在本地先统一成一种中间格式（我选 LeRobot，因为它的 <code>dataset</code> 目录结构最直观）。</p>
+<h2 id="sec-02">训练三阶段</h2>
+<figure class="code"><div class="code-bar"><span>text</span><button class="copy" type="button" data-copy>复制</button></div><pre><code>① 预训练：多本体、多任务，学通用视觉-语言-动作对齐
+② 后训练 / 微调：目标任务数据，适配具体机械臂与相机布局
+③ 部署：动作分块、滚动重规划、观测缓存对齐</code></pre></figure>
+<p>第二阶段是最容易被低估的。论文里常写「在目标任务上微调 10k 步」，实际复现时你会发现：<strong>微调数据的相机位置、光照、物体摆放，几乎决定了最终成败</strong>，而不只是步数。</p>
+<h2 id="sec-03">co-fine-tuning 为什么重要</h2>
+<p>只用机器人数据微调，模型会遗忘语言能力：原本能听懂「把左边那个红色方块放到托盘上」，微调后只会做训练集里的那几句话。做法是把网络图文 / VQA 数据按一定比例混进训练批次里，让语言与视觉表征不被冲掉。</p>
+<p>比例是超参：机器人数据占比太低学不会动作，太高丢语言。经验上从 1:1 起调，观察验证集上「未见指令的跟随率」和「动作成功率」两条曲线同时不塌。</p>
+<h2 id="sec-04">三个隐形坑</h2>
+<p><strong>标定误差。</strong> 末端位姿是从相机外参和正运动学推出来的，外参错 2 度，整批动作标签都偏。先做一次手眼标定复核，比多训 10k 步有用。</p>
+<p><strong>时间戳对齐。</strong> 图像、动作、指令三者若差一帧，模型学到的是「看着现在的画面做上一刻的动作」。采集时统一时钟，训练时按固定偏移做一致性检查。</p>
+<p><strong>控制频率不一致。</strong> 数据集 A 是 10 Hz，数据集 B 是 30 Hz，直接把两者混训，模型不知道一个动作 chunk 对应多长时间。要么重采样到统一频率，要么把频率作为条件输入。</p>
+<h2 id="sec-05">小数据微调的现实路径</h2>
+<p>如果只有一台机械臂和几十条演示，可行的做法是：</p>
+<ol><li>冻结主干，只训动作头（LoRA 或直接换头），先把「能执行」跑通</li><li>数据增广只做颜色抖动与轻微裁剪，<strong>不要做几何增广</strong>，否则动作标签和图像对不上</li><li>每条演示保证覆盖任务的关键阶段，宁要 20 条干净的长轨迹，不要 100 条随机的短片段</li><li>用同一批初始状态评测，至少 20 次 rollout，报告均值与方差</li></ol>
+<p>我自己的记录表长这样：</p>
+<div class="table-scroll"><table><colgroup><col style="width:19.05%"><col style="width:80.95%"></colgroup><thead><tr><th style="text-align:left">项</th><th style="text-align:left">内容</th></tr></thead><tbody><tr><td style="text-align:left">演示条数</td><td style="text-align:left">24（每条 40 秒，含 3 个阶段）</td></tr><tr><td style="text-align:left">微调步数</td><td style="text-align:left">8k，batch 8，单卡 24G</td></tr><tr><td style="text-align:left">成功判定</td><td style="text-align:left">物体进入目标区域且无碰撞</td></tr><tr><td style="text-align:left">结果</td><td style="text-align:left">20 次中 14 次成功（70%），失败集中在低光照</td></tr><tr><td style="text-align:left">下一步</td><td style="text-align:left">补 8 条低光照演示，检查相机曝光</td></tr></tbody></table></div>
+<h2 id="sec-06">一个反直觉的结论</h2>
+<p>在数据量有限时，<strong>提高数据一致性比提高数据多样性更能涨点</strong>。多样性是预训练阶段的事，微调阶段要做的是让模型相信「这台机器人、这个相机、这个桌子」的固定关系。</p>
+<p>下一篇看模型图谱：这些方法分别被谁用到了什么程度。</p><div class="note-foot"><a href="action-representation.html"><span class="dir">上一篇</span><span class="ttl">动作怎么变成 token：四个流派与取舍</span></a><a href="model-landscape.html" data-next><span class="dir">下一篇</span><span class="ttl">2026 年的开源 VLA 图谱</span></a></div></article><aside class="toc"><h2>本页目录</h2><ol><li data-level="2"><a href="#sec-01" data-toc-link>数据生态</a></li><li data-level="2"><a href="#sec-02" data-toc-link>训练三阶段</a></li><li data-level="2"><a href="#sec-03" data-toc-link>co-fine-tuning 为什么重要</a></li><li data-level="2"><a href="#sec-04" data-toc-link>三个隐形坑</a></li><li data-level="2"><a href="#sec-05" data-toc-link>小数据微调的现实路径</a></li><li data-level="2"><a href="#sec-06" data-toc-link>一个反直觉的结论</a></li></ol></aside></div></div></section></main>
+<footer class="site-foot">
+  <div class="wrap">
+    <span>个人学习记录 · 内容持续修订</span>
+    <span>
+      <a href="https://github.com/lijerry630/my_vla" rel="noopener">GitHub 仓库</a>
+      <span aria-hidden="true"> · </span>
+      由 content/*.md 构建
+    </span>
+  </div>
+</footer>
+<script src="../assets/js/site.js" defer></script>
+</body>
+</html>

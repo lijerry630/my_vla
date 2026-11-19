@@ -1,0 +1,9 @@
+{
+  "title": "VLA 学习日志",
+  "subtitle": "VISION · LANGUAGE · ACTION",
+  "description": "记录视觉-语言-动作模型（VLA）的系统学习：概念、架构、动作表示、数据、主流模型、评测与上手实验。",
+  "owner": "lijerry630",
+  "repo": "my_vla",
+  "branch": "main",
+  "repo_url": "https://github.com/lijerry630/my_vla"
+}

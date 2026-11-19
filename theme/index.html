@@ -1,0 +1,50 @@
+<section class="wrap">
+  <div class="sheet hero">
+    <div class="hero-copy">
+      <div class="kicker">从像素与指令，到关节的转动</div>
+      <h1>把「看懂」变成<em>「做到」</em></h1>
+      <p class="lead">这是一条 VLA 的学习路径：记录一次前向推理里到底发生了什么，动作如何被离散成 token，模型怎样跨本体迁移，以及如何用一张消费级显卡把开源策略真正跑起来。</p>
+      <div class="hero-meta">
+        <span>笔记 <strong>$COUNT</strong> 篇</span>
+        <span>更新 <strong>$UPDATED</strong></span>
+        <span>主线 <strong>概念 → 架构 → 数据 → 实验</strong></span>
+      </div>
+    </div>
+    <div class="token-panel" aria-label="动作 token 流示意">
+      <div class="token-bar"><span>ACTION TOKEN STREAM</span><b>50 HZ</b></div>
+      <div class="token-stage">
+        <span class="chip" data-stage>图像 + 指令</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="chip" data-stage>VLM 主干</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="chip" data-stage>动作头</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="chip" data-stage>执行</span>
+      </div>
+      <div class="token-rail" data-token-rail>
+        <span class="tok">Δx</span><span class="tok">Δy</span><span class="tok">Δz</span><span class="tok">Δrx</span><span class="tok">Δry</span><span class="tok">Δrz</span><span class="tok">grip</span><span class="tok">Δx</span><span class="tok">Δy</span><span class="tok">Δz</span><span class="tok">Δrx</span><span class="tok">Δry</span><span class="tok">Δrz</span><span class="tok">grip</span>
+      </div>
+      <div class="token-note">示意图：一段长度为 2 的 action chunk，每步 7 维末端位姿增量与夹爪开合。真实模型的动作头有离散 token、回归、扩散与流匹配四种常见做法。</div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="section-head">
+    <h2>学习路线</h2>
+    <span class="count">$COUNT 篇 · 按依赖顺序</span>
+  </div>
+  <ol class="route">
+$ROUTE
+  </ol>
+</section>
+
+<section class="wrap">
+  <div class="section-head">
+    <h2>最近更新</h2>
+    <a class="more" href="notes.html">全部笔记 →</a>
+  </div>
+  <ul class="log-list">
+$LATEST
+  </ul>
+</section>

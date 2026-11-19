@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>评测：LIBERO 分数好看，真机为什么不行 · VLA 学习日志</title>
+<meta name="description" content="四个常用 benchmark 各自测什么、成功率的统计陷阱、仿真到真机的差距来源，以及一套最低成本的自评流程。">
+<meta name="author" content="VLA 学习日志">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script><script defer src="https://fastly.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:['pre','code','script','style','textarea'],throwOnError:false})"></script>
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" fill="#101a23"/>
+        <rect x="5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="12.5" y="9" width="6" height="6" fill="none" stroke="#d7e3ee" stroke-width="1.2"/>
+        <rect x="20" y="9" width="7" height="6" fill="none" stroke="#e6b34a" stroke-width="1.2"/>
+        <path d="M7 21h18M23 19l2 2-2 2" fill="none" stroke="#7e93a5" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-text"><b>VLA 学习日志</b><span>VISION · LANGUAGE · ACTION</span></span>
+    </a>
+    <nav class="site-nav">
+      <a href="../index.html" data-nav="home">首页</a>
+      <a href="../notes.html" data-nav="notes" data-current>笔记</a>
+      <a href="../resources.html" data-nav="resources">资源</a>
+      <a href="../about.html" data-nav="about">关于</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="wrap"><div class="sheet"><div class="note-head"><div class="crumbs"><a href="../index.html">首页</a><span>/</span><a href="../notes.html">笔记</a><span>/</span>LOG 06</div><div class="note-meta"><span>LOG 06</span><span>2026-11-18</span><span>3 min</span><span>评测 · 方法论</span></div><h1>评测：LIBERO 分数好看，真机为什么不行</h1><p class="note-summary">四个常用 benchmark 各自测什么、成功率的统计陷阱、仿真到真机的差距来源，以及一套最低成本的自评流程。</p></div><div class="note-layout"><article class="prose"><h2 id="sec-01">常用 benchmark 各测什么</h2>
+<div class="table-scroll"><table><colgroup><col style="width:13.21%"><col style="width:32.08%"><col style="width:26.42%"><col style="width:28.29%"></colgroup><thead><tr><th style="text-align:left">Benchmark</th><th style="text-align:left">形态</th><th style="text-align:left">主要测的能力</th><th style="text-align:left">局限</th></tr></thead><tbody><tr><td style="text-align:left">LIBERO</td><td style="text-align:left">仿真，四个套件（Spatial / Object / Goal / Long）</td><td style="text-align:left">指令跟随、物体泛化、长程记忆</td><td style="text-align:left">桌面单臂，场景固定，仿真视觉干净</td></tr><tr><td style="text-align:left">CALVIN</td><td style="text-align:left">仿真，长程连续指令</td><td style="text-align:left">连续多步指令的执行与状态跟踪</td><td style="text-align:left">动作空间小，任务模板化</td></tr><tr><td style="text-align:left">SimplerEnv</td><td style="text-align:left">仿真，回放真实场景的视觉</td><td style="text-align:left">真实到仿真的视觉差距</td><td style="text-align:left">本体与任务数量有限</td></tr><tr><td style="text-align:left">真机分布式评测</td><td style="text-align:left">真实机器人，多站点</td><td style="text-align:left">真实环境鲁棒性</td><td style="text-align:left">成本高、周期长、方差大</td></tr></tbody></table></div>
+<p>LIBERO 之所以成为事实标准，是因为它便宜、四个套件划分清晰、脚本成熟。但它测的是「在固定桌面、固定相机、固定光照下按指令完成任务」，而这恰恰是真实世界最不缺变化的地方。</p>
+<h2 id="sec-02">成功率的统计陷阱</h2>
+<p>最常见的写法是「20 次 rollout 成功 14 次，成功率 70%」。这句话的信息量比看起来小得多：</p>
+<ul><li><strong>20 次的置信区间很宽。</strong> 70% 的 95% Wilson 区间约为 48%～85%，也就是说这个数字既可能是「勉强可用」，也可能是「相当可靠」。</li><li><strong>初始状态分布没写清。</strong> 物体位置从固定点开始，还是从任务相关的分布里采样？前者等于在测记忆。</li><li><strong>是否 per-task 微调。</strong> 每任务单独微调得到的分数，和单一策略跑全部任务，不是一回事。</li><li><strong>随机种子与评测轮数。</strong> 只报一个种子、只跑 10 次，基本不可比。</li></ul>
+<p>我现在的记录习惯是：<strong>报告成功率、rollout 次数、初始状态采样方式、是否 per-task 微调</strong>，四项缺一项就不写进结论。</p>
+<h2 id="sec-03">仿真到真机的三个落差</h2>
+<p><strong>视觉落差。</strong> 仿真里没有反光、没有运动模糊、没有自动曝光跳变。模型在仿真里学到的纹理线索，到真机上直接失效。</p>
+<p><strong>动力学落差。</strong> 摩擦、间隙、负载、延迟都没有精确建模。chunk 越长，这个落差造成的开环误差越大。</p>
+<p><strong>标定落差。</strong> 真机的相机外参与仿真不同，动作标签的含义就偏了。这一步不做，后面所有调参都是噪声。</p>
+<h2 id="sec-04">最低成本的自评流程</h2>
+<p>没有多站点评测条件时，我会这么做：</p>
+<ol><li>固定 5 组初始状态（覆盖正常、遮挡、低光照、物体偏移、干扰物），每组跑 4 次</li><li>成功判定写成可执行的规则（物体进入区域 + 无碰撞 + 夹爪释放），不靠肉眼</li><li>同时记录「首次成功步数」和「是否中途卡死」，后者比成功率更能暴露问题</li><li>每次改动只动一个变量，改动前后各跑一轮，比较区间而不是单点</li></ol>
+<p>这套流程一次大约 40 分钟，比在仿真里刷 2 个点有用。</p>
+<h2 id="sec-05">一个容易被忽略的指标</h2>
+<p><strong>推理延迟。</strong> 很多「成功率掉点」其实是延迟问题：模型输出本身没问题，但从看到画面到动作生效隔了 150 ms，闭环就退化成开环。评测时把端到端延迟量出来（相机曝光 + 传输 + 推理 + 通信），和 chunk 长度一起报，别只报成功率。</p>
+<p>下一篇是实践：用一张 4090 把开源策略跑起来。</p><div class="note-foot"><a href="model-landscape.html"><span class="dir">上一篇</span><span class="ttl">2026 年的开源 VLA 图谱</span></a><a href="hands-on.html" data-next><span class="dir">下一篇</span><span class="ttl">上手：一张 4090 能走到哪一步</span></a></div></article><aside class="toc"><h2>本页目录</h2><ol><li data-level="2"><a href="#sec-01" data-toc-link>常用 benchmark 各测什么</a></li><li data-level="2"><a href="#sec-02" data-toc-link>成功率的统计陷阱</a></li><li data-level="2"><a href="#sec-03" data-toc-link>仿真到真机的三个落差</a></li><li data-level="2"><a href="#sec-04" data-toc-link>最低成本的自评流程</a></li><li data-level="2"><a href="#sec-05" data-toc-link>一个容易被忽略的指标</a></li></ol></aside></div></div></section></main>
+<footer class="site-foot">
+  <div class="wrap">
+    <span>个人学习记录 · 内容持续修订</span>
+    <span>
+      <a href="https://github.com/lijerry630/my_vla" rel="noopener">GitHub 仓库</a>
+      <span aria-hidden="true"> · </span>
+      由 content/*.md 构建
+    </span>
+  </div>
+</footer>
+<script src="../assets/js/site.js" defer></script>
+</body>
+</html>

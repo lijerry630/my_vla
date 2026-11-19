@@ -1,0 +1,18 @@
+<section class="wrap">
+  <div class="sheet pad-sheet">
+    <div class="section-head" style="margin-top:0">
+      <h2>全部笔记</h2>
+      <span class="count"><span data-visible-count>$COUNT</span> / $COUNT 篇</span>
+    </div>
+    <p class="lede-small">按时间与依赖顺序排列。每篇都尽量回答一个具体问题，而不是复述论文摘要。</p>
+    <div class="filter-bar">
+      <span class="label">标签</span>
+      <div class="tag-strip">$TAGS</div>
+      <input class="search-input" type="search" placeholder="搜索标题或关键词" data-search aria-label="搜索笔记">
+    </div>
+    <ul class="log-list" data-log-list>
+$LIST
+    </ul>
+    <p class="empty-hint" data-empty hidden>没有匹配的笔记，换个标签或关键词试试。</p>
+  </div>
+</section>
