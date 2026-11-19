@@ -1,0 +1,163 @@
+<mujoco model="ur5e">  # 模型的根标签
+  <compiler angle="radian" meshdir="assets" autolimits="true"/> # 角度全部按照弧度来计算 网格加载
+
+  <option integrator="implicitfast"/> # 积分器
+
+  <default> # 按元素类型分组的属性模板（参数类）
+    <default class="ur5e"> # 整条关节臂通用
+      <material specular="0.5" shininess="0.25"/> # 材质 高光 锐度
+      <joint axis="0 1 0" range="-6.28319 6.28319" armature="0.1"/> # 关节 绕y轴 可旋转360° 关节转子的等效惯量
+      <general gaintype="fixed" biastype="affine" ctrlrange="-6.2831 6.2831" gainprm="2000" biasprm="0 -2000 -400"
+        forcerange="-150 150"/> # 执行器模板 force = gain × ctrl + bias 其中 gain = gainprm[0] bias = biasprm[0] + biasprm[1]×qpos + biasprm[2]×qvel
+
+      <default class="size3">  # 派生类 size是命名空间无意义
+        <default class="size3_limited"> # size3_limited`在size3之下继承全部父类参数，再额外收紧限位到 ±180
+          <joint range="-3.1415 3.1415"/>
+          <general ctrlrange="-3.1415 3.1415"/>
+        </default>
+      </default>
+      <default class="size1"> # size1
+        <general gainprm="500" biasprm="0 -500 -100" forcerange="-28 28"/>
+        # 腕部三个关节用小增益：`kp=500`、`kd=100`、力矩上限 ±28 N・m。
+      </default>
+      <default class="visual"> # 视觉 / 碰撞 / 标记
+        <geom type="mesh" contype="0" conaffinity="0" group="2"/> 网格 不碰撞 不响应碰撞
+      </default>
+      <default class="collision"> # 碰撞
+        <geom type="capsule" group="3"/> # 几何 胶囊体 渲染分组展示开关
+        <default class="eef_collision"> # 标记
+          <geom type="cylinder"/> # 圆柱
+        </default>
+      </default>
+      <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/> # 传感器尺寸 颜色
+    </default>
+  </default>
+
+  <asset> # 资源库
+    <material class="ur5e" name="black" rgba="0.033 0.033 0.033 1"/>
+    <material class="ur5e" name="jointgray" rgba="0.278 0.278 0.278 1"/>
+    <material class="ur5e" name="linkgray" rgba="0.82 0.82 0.82 1"/>
+    <material class="ur5e" name="urblue" rgba="0.49 0.678 0.8 1"/>
+
+    <mesh file="base_0.obj"/>
+    <mesh file="base_1.obj"/>
+    <mesh file="shoulder_0.obj"/>
+    <mesh file="shoulder_1.obj"/>
+    <mesh file="shoulder_2.obj"/>
+    <mesh file="upperarm_0.obj"/>
+    <mesh file="upperarm_1.obj"/>
+    <mesh file="upperarm_2.obj"/>
+    <mesh file="upperarm_3.obj"/>
+    <mesh file="forearm_0.obj"/>
+    <mesh file="forearm_1.obj"/>
+    <mesh file="forearm_2.obj"/>
+    <mesh file="forearm_3.obj"/>
+    <mesh file="wrist1_0.obj"/>
+    <mesh file="wrist1_1.obj"/>
+    <mesh file="wrist1_2.obj"/>
+    <mesh file="wrist2_0.obj"/>
+    <mesh file="wrist2_1.obj"/>
+    <mesh file="wrist2_2.obj"/>
+    <mesh file="wrist3.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="base" quat="0 0 0 -1" childclass="ur5e">
+      # 根刚体。quat="0 0 0 -1" 是 (w,x,y,z) → 绕 z 转 180° childclass：所有后代自动继承 class="ur5e" 的模板
+      <inertial mass="4.0" pos="0 0 0" diaginertia="0.00443333156 0.00443333156 0.0072"/>
+      # 质量 中心位置 主轴惯量
+      <geom mesh="base_0" material="black" class="visual"/>
+      # 网格 材质 继承类别来自visual
+      <geom mesh="base_1" material="jointgray" class="visual"/>
+      # 网格 材质 继承类别来自visual
+      <body name="shoulder_link" pos="0 0 0.163">
+        # 肩部：绕 z 轴旋转（水平转动整条手臂）位置
+        <inertial mass="3.7" pos="0 0 0" diaginertia="0.0102675 0.0102675 0.00666"/>
+        质量 质心在自身原点 主轴惯量
+        <joint name="shoulder_pan_joint" class="size3" axis="0 0 1"/>
+        # 关节
+        <geom mesh="shoulder_0" material="urblue" class="visual"/>
+        <geom mesh="shoulder_1" material="black" class="visual"/>
+        <geom mesh="shoulder_2" material="jointgray" class="visual"/>
+        <geom class="collision" size="0.06 0.06" pos="0 0 -0.04"/>
+        # 大臂：quat 绕 y 转 180°，让默认 y 轴方向正确
+        <body name="upper_arm_link" pos="0 0.138 0" quat="1 0 1 0">
+          <inertial mass="8.393" pos="0 0 0.2125" diaginertia="0.133886 0.133886 0.0151074"/>
+
+          <joint name="shoulder_lift_joint" class="size3"/>
+          <geom mesh="upperarm_0" material="linkgray" class="visual"/>
+          <geom mesh="upperarm_1" material="black" class="visual"/>
+          <geom mesh="upperarm_2" material="jointgray" class="visual"/>
+          <geom mesh="upperarm_3" material="urblue" class="visual"/>
+          <geom class="collision" pos="0 -0.04 0" quat="1 1 0 0" size="0.06 0.06"/>
+          <geom class="collision" size="0.05 0.2" pos="0 0 0.2"/>
+          # 小臂
+          <body name="forearm_link" pos="0 -0.131 0.425">
+            <inertial mass="2.275" pos="0 0 0.196" diaginertia="0.0311796 0.0311796 0.004095"/>
+            <joint name="elbow_joint" class="size3_limited"/>
+            <geom mesh="forearm_0" material="urblue" class="visual"/>
+            <geom mesh="forearm_1" material="linkgray" class="visual"/>
+            <geom mesh="forearm_2" material="black" class="visual"/>
+            <geom mesh="forearm_3" material="jointgray" class="visual"/>
+            <geom class="collision" pos="0 0.08 0" quat="1 1 0 0" size="0.055 0.06"/>
+            <geom class="collision" size="0.038 0.19" pos="0 0 0.2"/>
+            # 腕 1（y 轴）
+            <body name="wrist_1_link" pos="0 0 0.392" quat="1 0 1 0">
+              <inertial mass="1.219" pos="0 0.127 0" diaginertia="0.0025599 0.0025599 0.0021942"/>
+              <joint name="wrist_1_joint" class="size1"/>
+              <geom mesh="wrist1_0" material="black" class="visual"/>
+              <geom mesh="wrist1_1" material="urblue" class="visual"/>
+              <geom mesh="wrist1_2" material="jointgray" class="visual"/>
+              <geom class="collision" pos="0 0.05 0" quat="1 1 0 0" size="0.04 0.07"/>
+              # 腕2 z轴
+              <body name="wrist_2_link" pos="0 0.127 0">
+                <inertial mass="1.219" pos="0 0 0.1" diaginertia="0.0025599 0.0025599 0.0021942"/>
+                <joint name="wrist_2_joint" axis="0 0 1" class="size1"/>
+                <geom mesh="wrist2_0" material="black" class="visual"/>
+                <geom mesh="wrist2_1" material="urblue" class="visual"/>
+                <geom mesh="wrist2_2" material="jointgray" class="visual"/>
+                <geom class="collision" size="0.04 0.06" pos="0 0 0.04"/>
+                <geom class="collision" pos="0 0.02 0.1" quat="1 1 0 0" size="0.04 0.04"/>
+                # 腕3y轴
+                <body name="wrist_3_link" pos="0 0 0.1">
+                  <inertial mass="0.1889" pos="0 0.0771683 0" quat="1 0 0 1"
+                    diaginertia="0.000132134 9.90863e-05 9.90863e-05"/>
+                  <joint name="wrist_3_joint" class="size1"/>
+                  <geom material="linkgray" mesh="wrist3" class="visual"/>
+                  <geom class="eef_collision" pos="0 0.08 0" quat="1 1 0 0" size="0.04 0.02"/>
+                  # 末端推头：圆柱，半径 0.04、半长 0.02，沿 y 前伸 8 cm。
+                       quat="1 1 0 0" 是绕 x 转 180°，把圆柱轴向从 z 转到 y。
+                       真正接触方块的就是这个几何体
+                  <site name="attachment_site" pos="0 0.1 0" quat="-1 1 0 0"/>
+                  # 力传感器锚点：腕3 前方 10 cm。
+                       quat="-1 1 0 0" 是绕 x 转 180°，所以 site 的 z 轴指向工具内侧，
+                       这就是 sensordata 里 z 分量出现负值的原因
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="force_sensor" pos="0 0.1 0" euler="3.14 0 3.14"> # 传感器
+        <geom name='force_sensor_geom' type="sphere" mass="0.0" size="0.04" rgba="0 1 0 0.3"/>
+        <site name="force_sensor_site" pos="0 0 0" quat="1 0 0 0"/>
+      </body>
+
+    </body>
+  </worldbody>
+  <sensor>
+        <force name="tool_force" site="attachment_site"/>
+  </sensor>
+  <actuator> # 执行器 模板 + 名字 + 绑哪个关节
+    <general class="size3" name="shoulder_pan" joint="shoulder_pan_joint"/>
+    <general class="size3" name="shoulder_lift" joint="shoulder_lift_joint"/>
+    <general class="size3_limited" name="elbow" joint="elbow_joint"/>
+    <general class="size1" name="wrist_1" joint="wrist_1_joint"/>
+    <general class="size1" name="wrist_2" joint="wrist_2_joint"/>
+    <general class="size1" name="wrist_3" joint="wrist_3_joint"/>
+  </actuator>
+
+<!--  <keyframe>-->
+<!--    <key name="home" qpos="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0" ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"/>-->
+<!--  </keyframe>-->
+</mujoco>
